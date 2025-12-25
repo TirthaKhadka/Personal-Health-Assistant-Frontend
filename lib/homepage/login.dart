@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dashboard_page.dart';
 import 'signUp.dart';
 
@@ -12,81 +12,88 @@ class LoginPage extends StatelessWidget {
   final TextEditingController passwordController = TextEditingController();
 
   // Login API call
-  Future<void> login(BuildContext context, String email, String password) async {
-  final url = Uri.parse("http://10.0.2.2:8081/auth/login");
+  Future<void> login(
+    BuildContext context,
+    String email,
+    String password,
+  ) async {
+    final url = Uri.parse("http://10.0.2.2:8081/auth/login");
 
-  try {
-    final response = await http.post(
-      url,
-      headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"email": email, "password": password}),
-    );
+    try {
+      final response = await http.post(
+        url,
+        headers: {"Content-Type": "application/json"},
+        body: jsonEncode({"email": email, "password": password}),
+      );
 
-    print("Status code: ${response.statusCode}");
-    print("Response body: ${response.body}");
+      print("Status code: ${response.statusCode}");
+      print("Response body: ${response.body}");
 
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final token = data['token'];
-      print("✅ Login successful. Token: $token");
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final token = data['token'];
+        // Save token to SharedPreferences
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString("token", token);
+        print("✅ Login successful. Token: $token");
 
-      // Show success dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          // After a short delay, automatically navigate to Dashboard
-          Future.delayed(const Duration(seconds: 1), () {
-            Navigator.pop(context); // Close dialog
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) =>const DashboardPage()),
-            );
-          });
+        // Show success dialog
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) {
+            // After a short delay, automatically navigate to Dashboard
+            Future.delayed(const Duration(seconds: 1), () {
+              Navigator.pop(context); // Close dialog
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (_) => const DashboardPage()),
+              );
+            });
 
-          return AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: const [
-                Icon(Icons.check_circle, color: Color(0xFFE655A8), size: 60),
-                SizedBox(height: 16),
-                Text(
-                  "Login Successful!",
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF333333),
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: const [
+                  Icon(Icons.check_circle, color: Color(0xFFE655A8), size: 60),
+                  SizedBox(height: 16),
+                  Text(
+                    "Login Successful!",
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF333333),
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-                SizedBox(height: 8),
-                Text(
-                  "Welcome back to Health AI.",
-                  style: TextStyle(fontSize: 14, color: Color(0xFF666666)),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        },
-      );
-    } else {
-      final errorMsg = jsonDecode(response.body)['error'] ?? response.body;
-      print("❌ Login failed: $errorMsg");
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Login failed: $errorMsg")),
-      );
+                  SizedBox(height: 8),
+                  Text(
+                    "Welcome back to Health AI.",
+                    style: TextStyle(fontSize: 14, color: Color(0xFF666666)),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      } else {
+        final errorMsg = jsonDecode(response.body)['error'] ?? response.body;
+        print("❌ Login failed: $errorMsg");
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Login failed: $errorMsg")));
+      }
+    } catch (e) {
+      print("⚠️ Error during login: $e");
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     }
-  } catch (e) {
-    print("⚠️ Error during login: $e");
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Error: $e")),
-    );
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +125,10 @@ class LoginPage extends StatelessWidget {
                 right: 0,
                 bottom: 0,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
                   decoration: const BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.only(
@@ -155,7 +165,10 @@ class LoginPage extends StatelessWidget {
                           controller: emailController,
                           decoration: InputDecoration(
                             labelText: 'Email or Username',
-                            prefixIcon: const Icon(Icons.person_outline, color: Color(0xFFE655A8)),
+                            prefixIcon: const Icon(
+                              Icons.person_outline,
+                              color: Color(0xFFE655A8),
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -172,7 +185,10 @@ class LoginPage extends StatelessWidget {
                           obscureText: true,
                           decoration: InputDecoration(
                             labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock_outline, color: Color(0xFFE655A8)),
+                            prefixIcon: const Icon(
+                              Icons.lock_outline,
+                              color: Color(0xFFE655A8),
+                            ),
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
                               borderSide: BorderSide.none,
@@ -226,7 +242,9 @@ class LoginPage extends StatelessWidget {
                               onPressed: () {
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (_) => SignUpPage()),
+                                  MaterialPageRoute(
+                                    builder: (_) => SignUpPage(),
+                                  ),
                                 );
                               },
                               child: const Text(

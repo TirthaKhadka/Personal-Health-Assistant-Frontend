@@ -34,6 +34,8 @@ dependencies:
   http: ^1.2.2
   intl: ^0.18.1  
   image_picker: ^1.0.7
+  lottie: ^3.1.0
+  shared_preferences: ^2.1.1
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -69,6 +71,10 @@ flutter:
     - assets/xray.jpeg
     - assets/blood_test.jpeg
     - assets/routine_checkup.jpeg
+    - assets/lottie/Covid Icon _ Pneumonia.json
+    - assets/xray_holding.jpeg
+    - assets/lottie/Lungs.json
+    - assets/lottie/paru-paru.json
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

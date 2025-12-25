@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
-import 'Xray_page.dart'; // Make sure this file exists in /lib
+import 'Xray_page.dart';
+import 'package:lottie/lottie.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
@@ -11,95 +15,358 @@ class DashboardPage extends StatefulWidget {
 class _DashboardPageState extends State<DashboardPage> {
   int _selectedIndex = 0;
 
-  // Pages for the bottom navigation
-  final List<Widget> _pages = const [
-    DashboardContent(),
-    InsightsPage(),
-    GoalsPage(),
-    AssistantPage(),
-  ];
-
-  void _onItemTapped(int index) {
-    if (index == 1) {
-      // Navigate directly to PneumoniaDetectPage for "Data" tab
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const PneumoniaDetectPage()),
-      );
-      return; // Do not change _selectedIndex
-    }
+  void _onNavTap(int index) {
     setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(child: _pages[_selectedIndex]),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex > 0 ? _selectedIndex : 0,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: const Color(0xFFE655A8),
-        unselectedItemColor: Colors.grey,
-        onTap: _onItemTapped,
-        items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.dashboard), label: "Dashboard"),
-          BottomNavigationBarItem(icon: Icon(Icons.show_chart), label: "Data"),
-          BottomNavigationBarItem(icon: Icon(Icons.insights), label: "Insights"),
-          BottomNavigationBarItem(icon: Icon(Icons.flag), label: "Goals"),
-          BottomNavigationBarItem(icon: Icon(Icons.smart_toy), label: "Assistant"),
-        ],
+      backgroundColor: const Color(0xFFF9F9F9),
+      body: const SafeArea(child: DashboardContent()),
+      bottomNavigationBar: _BottomNavBar(
+        currentIndex: _selectedIndex,
+        onTap: _onNavTap,
       ),
     );
   }
 }
 
-// ---------------- Dashboard Content -----------------
+/* ===================== DASHBOARD CONTENT ===================== */
+
 class DashboardContent extends StatelessWidget {
   const DashboardContent({super.key});
 
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text("Dashboard",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              IconButton(
-                icon: const Icon(Icons.settings, color: Colors.grey),
-                onPressed: () {},
-              ),
-            ],
+        children: const [
+          _Header(),
+          SizedBox(height: 24),
+          _MainCard(),
+          SizedBox(height: 20),
+          _TBCard(),
+          SizedBox(height: 24),
+          _RecentActivity(),
+          SizedBox(height: 16),
+          Text(
+            "* This tool is for screening assistance only and does not replace professional medical advice. Please consult a doctor for diagnosis.",
+            style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
-          const SizedBox(height: 20),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.pink.shade50,
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: const Column(
+        ],
+      ),
+    );
+  }
+}
+
+/* ===================== HEADER ===================== */
+
+class _Header extends StatelessWidget {
+  const _Header();
+
+  // Function to fetch user name from backend
+  Future<String> fetchUserName() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("token");
+
+    final response = await http.get(
+      Uri.parse("http://10.0.2.2:8081/auth/me"),
+      headers: {"Authorization": "Bearer $token"},
+    );
+    print("Token: $token"); // Debug print
+    if (token == null) return "User";
+    print("Status code: ${response.statusCode}");
+    print("Response body: ${response.body}");
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body)['name'];
+    } else {
+      throw Exception("Failed to load user");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<String>(
+      future: fetchUserName(),
+      builder: (context, snapshot) {
+        String displayName = "Loading...";
+        if (snapshot.hasData) {
+          displayName = snapshot.data!;
+        } else if (snapshot.hasError) {
+          displayName = "User";
+        }
+
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text("Today's Snapshot",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                SizedBox(height: 16),
-                Text("Your Health Score", style: TextStyle(color: Colors.black54)),
-                SizedBox(height: 8),
-                Text("82",
-                    style: TextStyle(
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.pink)),
-                SizedBox(height: 8),
+                const Text(
+                  "Welcome back,",
+                  style: TextStyle(color: Colors.grey, fontSize: 14),
+                ),
+                const SizedBox(height: 4),
                 Text(
-                    "You're on track today! Keep walking, stay hydrated, and maintain your activity momentum.",
-                    style: TextStyle(color: Colors.black54)),
+                  displayName,
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                const _StatusChip(), // ✅ Status chip remains here
+              ],
+            ),
+            Row(
+              children: const [
+                Icon(Icons.notifications_none, color: Colors.grey),
+                SizedBox(width: 12),
+                CircleAvatar(radius: 18, backgroundColor: Color(0xFFFFC1A1)),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  const _StatusChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE7F8EF),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.circle, size: 8, color: Colors.green),
+          SizedBox(width: 6),
+          Text(
+            "System Status: Online",
+            style: TextStyle(fontSize: 12, color: Colors.green),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ===================== BREATHING LUNGS ===================== */
+
+class BreathingLungs extends StatefulWidget {
+  const BreathingLungs({super.key});
+
+  @override
+  State<BreathingLungs> createState() => _BreathingLungsState();
+}
+
+class _BreathingLungsState extends State<BreathingLungs>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaleTransition(
+      scale: Tween(
+        begin: 0.9,
+        end: 1.05,
+      ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut)),
+      child: Container(
+        width: 48,
+        height: 48,
+        decoration: const BoxDecoration(
+          color: Color(0xFFFFEEF5),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.air_rounded,
+          color: Color(0xFFE655A8),
+          size: 28,
+        ),
+      ),
+    );
+  }
+}
+
+/* ===================== PNEUMONIA CARD ===================== */
+
+class _MainCard extends StatelessWidget {
+  const _MainCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 20),
+        ],
+      ),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // ❤️ LOTTIE (LEFT CORNER)
+          Positioned(
+            top: 240,
+            left: 12,
+            child: Lottie.asset(
+              "assets/lottie/Covid Icon _ Pneumonia.json",
+              height: 100,
+              repeat: true,
+            ),
+          ),
+
+          // 📄 CONTENT
+          Padding(
+            padding: const EdgeInsets.all(18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 40),
+
+                const Text.rich(
+                  TextSpan(
+                    text: "Let's check your\n",
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    children: [
+                      TextSpan(
+                        text: "lung health",
+                        style: TextStyle(color: Color(0xFFE655A8)),
+                      ),
+                      TextSpan(text: " today."),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEEF5),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Lottie.asset(
+                            "assets/lottie/Lungs.json",
+                            repeat: true,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Text(
+                          "Pneumonia Detection",
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Color(0xFFFFEEF5),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Text(
+                        "AI Powered",
+                        style: TextStyle(
+                          color: Color(0xFFE655A8),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 12),
+
+                const Text(
+                  "Upload chest X-ray for instant analysis and early detection.",
+                  style: TextStyle(color: Colors.grey),
+                ),
+
+                const SizedBox(height: 16),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const PneumoniaDetectPage(),
+                        ),
+                      );
+                    },
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(
+                        color: Color(0xFFE655A8),
+                      ), // Pink border
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 14,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: const [
+                        Icon(
+                          Icons.upload_file,
+                          color: Colors.pink, // Pink icon
+                          size: 20,
+                        ),
+                        SizedBox(width: 8),
+                        Text(
+                          "Detect\nPneumonia",
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.pink, // Pink text
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -109,32 +376,223 @@ class DashboardContent extends StatelessWidget {
   }
 }
 
-// ---------------- Insights Page -----------------
-class InsightsPage extends StatelessWidget {
-  const InsightsPage({super.key});
+/* ===================== TB CARD ===================== */
+
+class _TBCard extends StatelessWidget {
+  const _TBCard();
 
   @override
-  Widget build(BuildContext context) => const Center(
-        child: Text("Insights Page", style: TextStyle(color: Colors.pink)),
-      );
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(22),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  "Tuberculosis",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  "Detailed screening process for TB signs.",
+                  style: TextStyle(color: Colors.grey),
+                ),
+                const SizedBox(height: 12),
+                OutlinedButton(
+                  onPressed: () {},
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: Colors.pink),
+                  ),
+                  child: const Text(
+                    "Detect TB",
+                    style: TextStyle(color: Colors.pink),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: Image.asset(
+              "assets/xray_holding.jpeg",
+              height: 90,
+              width: 90,
+              fit: BoxFit.cover,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
-// ---------------- Goals Page -----------------
-class GoalsPage extends StatelessWidget {
-  const GoalsPage({super.key});
+/* ===================== RECENT ACTIVITY ===================== */
+
+class _RecentActivity extends StatelessWidget {
+  const _RecentActivity();
 
   @override
-  Widget build(BuildContext context) => const Center(
-        child: Text("Goals Page", style: TextStyle(color: Colors.pink)),
-      );
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: const [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              "Recent Activity",
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Text("See All", style: TextStyle(color: Color(0xFFE655A8))),
+          ],
+        ),
+        SizedBox(height: 12),
+        _ActivityTile(
+          title: "Pneumonia Scan",
+          subtitle: "Today, 9:41 AM",
+          status: "Normal",
+          success: true,
+        ),
+        SizedBox(height: 10),
+        _ActivityTile(
+          title: "TB Check",
+          subtitle: "Yesterday",
+          status: "Consult",
+          success: false,
+        ),
+      ],
+    );
+  }
 }
 
-// ---------------- Assistant Page -----------------
-class AssistantPage extends StatelessWidget {
-  const AssistantPage({super.key});
+class _ActivityTile extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final String status;
+  final bool success;
+
+  const _ActivityTile({
+    required this.title,
+    required this.subtitle,
+    required this.status,
+    required this.success,
+  });
 
   @override
-  Widget build(BuildContext context) => const Center(
-        child: Text("Assistant Page", style: TextStyle(color: Colors.pink)),
-      );
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Row(
+        children: [
+          CircleAvatar(
+            backgroundColor: success
+                ? const Color(0xFFE7F8EF)
+                : const Color(0xFFFFF1E8),
+            child: Icon(
+              success ? Icons.check : Icons.medical_services,
+              color: success ? Colors.green : Colors.orange,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  subtitle,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: success
+                  ? const Color(0xFFE7F8EF)
+                  : const Color(0xFFFFF1E8),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              status,
+              style: TextStyle(color: success ? Colors.green : Colors.orange),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/* ===================== BOTTOM NAV ===================== */
+
+class _BottomNavBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+
+  const _BottomNavBar({required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 80,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: [
+          _navIcon(Icons.home_rounded, 0),
+          _navIcon(Icons.history_rounded, 1),
+          _cameraButton(),
+          _navIcon(Icons.person_rounded, 3),
+          _navIcon(Icons.settings_rounded, 4),
+        ],
+      ),
+    );
+  }
+
+  Widget _navIcon(IconData icon, int index) {
+    final active = currentIndex == index;
+    return GestureDetector(
+      onTap: () => onTap(index),
+      child: Icon(
+        icon,
+        size: 26,
+        color: active ? const Color(0xFFE655A8) : Colors.grey,
+      ),
+    );
+  }
+
+  Widget _cameraButton() {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: const BoxDecoration(
+        color: Color(0xFFE655A8),
+        shape: BoxShape.circle,
+      ),
+      child: const Icon(
+        Icons.camera_alt_rounded,
+        color: Colors.white,
+        size: 26,
+      ),
+    );
+  }
 }
