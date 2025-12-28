@@ -46,6 +46,8 @@ class _PneumoniaDetectPageState extends State<PneumoniaDetectPage> {
         'POST',
         Uri.parse('http://10.0.2.2:8000/predict'),
       );
+      // Add API key header
+      request.headers['x-api-key'] = 'SPRING_TO_FASTAPI_SECRET';
       request.files.add(await http.MultipartFile.fromPath('file', _image!.path));
       var response = await request.send();
       var res = await http.Response.fromStream(response);
