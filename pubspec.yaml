@@ -75,6 +75,10 @@ flutter:
     - assets/xray_holding.jpeg
     - assets/lottie/Lungs.json
     - assets/lottie/paru-paru.json
+    - assets/tb_logo.png
+    - assets/tb_logo1.png
+    - assets/tb_logofinal.png
+
 
 
   # An image asset can refer to one or more resolution-specific "variants", see

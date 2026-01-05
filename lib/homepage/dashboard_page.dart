@@ -1,12 +1,22 @@
 import 'package:flutter/material.dart';
-import 'Xray_page.dart';
+import 'Pneumonia_Xray_page.dart';
 import 'package:lottie/lottie.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'Tuberclosis_Xray_page.dart';
+import 'user.dart';
 
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:http/http.dart' as http;
+import 'user.dart'; // Make sure this is your User model
+
+/* ===================== DASHBOARD PAGE ===================== */
 class DashboardPage extends StatefulWidget {
-  const DashboardPage({super.key});
+  final User loggedInUser;
+  const DashboardPage({super.key, required this.loggedInUser});
 
   @override
   State<DashboardPage> createState() => _DashboardPageState();
@@ -23,7 +33,9 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
-      body: const SafeArea(child: DashboardContent()),
+      body: SafeArea(
+        child: DashboardContent(loggedInUser: widget.loggedInUser),
+      ),
       bottomNavigationBar: _BottomNavBar(
         currentIndex: _selectedIndex,
         onTap: _onNavTap,
@@ -33,9 +45,9 @@ class _DashboardPageState extends State<DashboardPage> {
 }
 
 /* ===================== DASHBOARD CONTENT ===================== */
-
 class DashboardContent extends StatelessWidget {
-  const DashboardContent({super.key});
+  final User loggedInUser;
+  const DashboardContent({super.key, required this.loggedInUser});
 
   @override
   Widget build(BuildContext context) {
@@ -43,16 +55,16 @@ class DashboardContent extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 100),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
-          _Header(),
-          SizedBox(height: 24),
-          _MainCard(),
-          SizedBox(height: 20),
-          _TBCard(),
-          SizedBox(height: 24),
-          _RecentActivity(),
-          SizedBox(height: 16),
-          Text(
+        children: [
+          _Header(loggedInUser: loggedInUser), // ✅ pass the user here
+          const SizedBox(height: 24),
+          _MainCard(loggedInUser: loggedInUser),
+          const SizedBox(height: 20),
+          const _TBCard(),
+          const SizedBox(height: 24),
+          const _RecentActivity(),
+          const SizedBox(height: 16),
+          const Text(
             "* This tool is for screening assistance only and does not replace professional medical advice. Please consult a doctor for diagnosis.",
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
@@ -63,75 +75,42 @@ class DashboardContent extends StatelessWidget {
 }
 
 /* ===================== HEADER ===================== */
-
 class _Header extends StatelessWidget {
-  const _Header();
-
-  // Function to fetch user name from backend
-  Future<String> fetchUserName() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("token");
-
-    final response = await http.get(
-      Uri.parse("http://10.0.2.2:8081/auth/me"),
-      headers: {"Authorization": "Bearer $token"},
-    );
-    print("Token: $token"); // Debug print
-    if (token == null) return "User";
-    print("Status code: ${response.statusCode}");
-    print("Response body: ${response.body}");
-
-    if (response.statusCode == 200) {
-      return jsonDecode(response.body)['name'];
-    } else {
-      throw Exception("Failed to load user");
-    }
-  }
+  final User loggedInUser;
+  const _Header({super.key, required this.loggedInUser});
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<String>(
-      future: fetchUserName(),
-      builder: (context, snapshot) {
-        String displayName = "Loading...";
-        if (snapshot.hasData) {
-          displayName = snapshot.data!;
-        } else if (snapshot.hasError) {
-          displayName = "User";
-        }
-
-        return Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  "Welcome back,",
-                  style: TextStyle(color: Colors.grey, fontSize: 14),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  displayName,
-                  style: const TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const _StatusChip(), // ✅ Status chip remains here
-              ],
+            const Text(
+              "Welcome back,",
+              style: TextStyle(color: Colors.grey, fontSize: 14),
             ),
-            Row(
-              children: const [
-                Icon(Icons.notifications_none, color: Colors.grey),
-                SizedBox(width: 12),
-                CircleAvatar(radius: 18, backgroundColor: Color(0xFFFFC1A1)),
-              ],
+            const SizedBox(height: 4),
+            Text(
+              loggedInUser.name, // ✅ use the logged-in user object
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
             ),
+            const SizedBox(height: 8),
+            const _StatusChip(), // keep your status chip here
           ],
-        );
-      },
+        ),
+        Row(
+          children: const [
+            Icon(Icons.notifications_none, color: Colors.grey),
+            SizedBox(width: 12),
+            CircleAvatar(radius: 18, backgroundColor: Color(0xFFFFC1A1)),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -217,7 +196,8 @@ class _BreathingLungsState extends State<BreathingLungs>
 /* ===================== PNEUMONIA CARD ===================== */
 
 class _MainCard extends StatelessWidget {
-  const _MainCard();
+  final User loggedInUser;
+  const _MainCard({Key? key, required this.loggedInUser}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -329,7 +309,7 @@ class _MainCard extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => const PneumoniaDetectPage(),
+                          builder: (_) => PneumoniaDetectPage(loggedInUser: loggedInUser),
                         ),
                       );
                     },
@@ -406,7 +386,14 @@ class _TBCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 12),
                 OutlinedButton(
-                  onPressed: () {},
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const TuberculosisPage(),
+                      ),
+                    );
+                  },
                   style: OutlinedButton.styleFrom(
                     side: const BorderSide(color: Colors.pink),
                   ),

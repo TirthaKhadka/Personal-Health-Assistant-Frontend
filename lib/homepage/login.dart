@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dashboard_page.dart';
 import 'signUp.dart';
+import 'user.dart';
 
 class LoginPage extends StatelessWidget {
   LoginPage({super.key});
@@ -17,7 +18,7 @@ class LoginPage extends StatelessWidget {
     String email,
     String password,
   ) async {
-    final url = Uri.parse("http://10.0.2.2:8081/auth/login");
+    final url = Uri.parse("http://192.168.0.3:8081/auth/login");
 
     try {
       final response = await http.post(
@@ -32,10 +33,13 @@ class LoginPage extends StatelessWidget {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final token = data['token'];
+        final userJson = data['user'];
+        final loggedInUser = User.fromJson(userJson, token);
         // Save token to SharedPreferences
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString("token", token);
+        await prefs.setString("user", jsonEncode(loggedInUser.toJson()));
         print("✅ Login successful. Token: $token");
+
 
         // Show success dialog
         showDialog(
@@ -47,7 +51,7 @@ class LoginPage extends StatelessWidget {
               Navigator.pop(context); // Close dialog
               Navigator.pushReplacement(
                 context,
-                MaterialPageRoute(builder: (_) => const DashboardPage()),
+                MaterialPageRoute(builder: (_) => DashboardPage(loggedInUser: loggedInUser)),
               );
             });
 
