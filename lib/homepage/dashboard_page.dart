@@ -6,7 +6,9 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'Tuberclosis_Xray_page.dart';
 import 'user.dart';
-
+import 'Chatbot/chatbot_page.dart';
+import 'Recent/recent_page.dart';
+import 'Settings/settings.dart';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,6 +41,7 @@ class _DashboardPageState extends State<DashboardPage> {
       bottomNavigationBar: _BottomNavBar(
         currentIndex: _selectedIndex,
         onTap: _onNavTap,
+        loggedInUser: widget.loggedInUser,
       ),
     );
   }
@@ -77,7 +80,7 @@ class DashboardContent extends StatelessWidget {
 /* ===================== HEADER ===================== */
 class _Header extends StatelessWidget {
   final User loggedInUser;
-  const _Header({super.key, required this.loggedInUser});
+  const _Header({required this.loggedInUser});
 
   @override
   Widget build(BuildContext context) {
@@ -94,10 +97,7 @@ class _Header extends StatelessWidget {
             const SizedBox(height: 4),
             Text(
               loggedInUser.name, // ✅ use the logged-in user object
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
             const _StatusChip(), // keep your status chip here
@@ -197,7 +197,7 @@ class _BreathingLungsState extends State<BreathingLungs>
 
 class _MainCard extends StatelessWidget {
   final User loggedInUser;
-  const _MainCard({Key? key, required this.loggedInUser}) : super(key: key);
+  const _MainCard({super.key, required this.loggedInUser});
 
   @override
   Widget build(BuildContext context) {
@@ -309,7 +309,8 @@ class _MainCard extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => PneumoniaDetectPage(loggedInUser: loggedInUser),
+                          builder: (_) =>
+                              PneumoniaDetectPage(loggedInUser: loggedInUser),
                         ),
                       );
                     },
@@ -532,11 +533,19 @@ class _ActivityTile extends StatelessWidget {
 class _BottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
+  final User loggedInUser; // Pass this to DashboardPage or RecentPage
 
-  const _BottomNavBar({required this.currentIndex, required this.onTap});
+  const _BottomNavBar({
+    required this.currentIndex,
+    required this.onTap,
+    required this.loggedInUser,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // Check if Recent tab is selected
+    final isRecentSelected = currentIndex == 1;
+
     return Container(
       height: 80,
       decoration: const BoxDecoration(
@@ -545,41 +554,74 @@ class _BottomNavBar extends StatelessWidget {
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
-        children: [
-          _navIcon(Icons.home_rounded, 0),
-          _navIcon(Icons.history_rounded, 1),
-          _cameraButton(),
-          _navIcon(Icons.person_rounded, 3),
-          _navIcon(Icons.settings_rounded, 4),
-        ],
+        children: isRecentSelected
+            ? [
+                _navIcon(Icons.home_rounded, () {
+                  onTap(0);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DashboardPage(loggedInUser: loggedInUser),
+                    ),
+                  );
+                }),
+                _navIcon(Icons.chat_bubble_rounded, () {
+                  onTap(5); // mark active
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => ChatbotPage(loggedInUser: loggedInUser)),
+                  );
+                }),
+                _navIcon(Icons.settings_rounded, () {
+                  onTap(4);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) =>  SettingsPage(loggedInUser: loggedInUser)),
+                  );
+                }),
+              ]
+            : [
+                _navIcon(Icons.home_rounded, () {
+                  onTap(0);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DashboardPage(loggedInUser: loggedInUser),
+                    ),
+                  );
+                }),
+                _navIcon(Icons.history_rounded, () {
+                  onTap(1);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RecentPage(loggedInUser: loggedInUser),
+                    ),
+                  );
+                }),
+                _navIcon(Icons.chat_bubble_rounded, () {
+                  onTap(5); // mark active
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) => ChatbotPage(loggedInUser: loggedInUser)),
+                  );
+                }),
+                _navIcon(Icons.settings_rounded, () {
+                  onTap(4);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (_) =>  SettingsPage(loggedInUser: loggedInUser)),
+                  );
+                }),
+              ],
       ),
     );
   }
 
-  Widget _navIcon(IconData icon, int index) {
-    final active = currentIndex == index;
+  Widget _navIcon(IconData icon, VoidCallback onTapAction) {
     return GestureDetector(
-      onTap: () => onTap(index),
-      child: Icon(
-        icon,
-        size: 26,
-        color: active ? const Color(0xFFE655A8) : Colors.grey,
-      ),
-    );
-  }
-
-  Widget _cameraButton() {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: const BoxDecoration(
-        color: Color(0xFFE655A8),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.camera_alt_rounded,
-        color: Colors.white,
-        size: 26,
-      ),
+      onTap: onTapAction,
+      child: Icon(icon, size: 26, color: Colors.grey),
     );
   }
 }
