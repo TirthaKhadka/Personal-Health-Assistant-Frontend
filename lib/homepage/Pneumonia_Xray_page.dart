@@ -7,7 +7,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:personal_health_assistant/homepage/user.dart';
 
-import 'dashboard_page.dart';
 
 // ================= LOGGED-IN USER MODEL (example) =================
 // You should replace this with your actual user model from login
@@ -63,7 +62,7 @@ class _PneumoniaDetectPageState extends State<PneumoniaDetectPage> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.0.3:8081/api/predict'),
+        Uri.parse('http://10.0.2.2:8081/api/predict'),
       );
 
       request.fields['userId'] = widget.loggedInUser.id.toString();

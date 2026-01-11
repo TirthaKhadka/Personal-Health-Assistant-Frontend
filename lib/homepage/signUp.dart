@@ -49,7 +49,7 @@ class _SignUpPageState extends State<SignUpPage> {
     isLoading = true;
   });
 
-  final url = Uri.parse("http://192.168.0.3:8081/auth/register");
+  final url = Uri.parse("http://10.0.2.2:8081/auth/register");
   final body = jsonEncode({
     "name": fullNameController.text,
     "email": emailController.text,
