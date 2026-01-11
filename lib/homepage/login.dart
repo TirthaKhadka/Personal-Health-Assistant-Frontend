@@ -18,7 +18,7 @@ class LoginPage extends StatelessWidget {
     String email,
     String password,
   ) async {
-    final url = Uri.parse("http://192.168.0.3:8081/auth/login");
+    final url = Uri.parse("http://192.168.18.3:8081/auth/login");
 
     try {
       final response = await http.post(

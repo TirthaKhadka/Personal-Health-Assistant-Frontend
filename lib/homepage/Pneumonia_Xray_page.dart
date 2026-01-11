@@ -63,7 +63,7 @@ class _PneumoniaDetectPageState extends State<PneumoniaDetectPage> {
     try {
       final request = http.MultipartRequest(
         'POST',
-        Uri.parse('http://192.168.0.3:8081/api/predict'),
+        Uri.parse('http://192.168.18.3:8081/api/predict'),
       );
 
       request.fields['userId'] = widget.loggedInUser.id.toString();
